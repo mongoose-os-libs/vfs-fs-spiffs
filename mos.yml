@@ -1,0 +1,24 @@
+author: mongoose-os
+description: Implements the mos VFS interface for SPIFFS
+type: lib
+version: 1.0
+
+sources:
+  - src
+  - src/spiffs
+
+includes:
+  - include
+  - include/spiffs
+  - include/${platform}
+
+libs:
+  - origin: https://github.com/mongoose-os-libs/vfs-common
+
+tags:
+  - c
+  - fs
+  - vfs
+  - core
+
+manifest_version: 2017-09-29
