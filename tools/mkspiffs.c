@@ -110,7 +110,7 @@ void show_usage(char *argv[], const char *err_msg) {
   if (err_msg != NULL) fprintf(stderr, "Error: %s\r\n", err_msg);
   fprintf(stderr,
           "usage: %s [-s fs_size] [-b block_size] [-p page_size] [-e "
-          "erase_size] [-f image_file] [-u] <root_dir>\n",
+          "erase_size] [-f image_file] [-u] [-d] <root_dir>\n",
           argv[0]);
   exit(1);
 }
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   bool update = false;
   int fs_size = -1, bs = FS_BLOCK_SIZE, ps = FS_PAGE_SIZE, es = FS_ERASE_SIZE;
 
-  while ((opt = getopt(argc, argv, "b:e:f:p:s:u")) != -1) {
+  while ((opt = getopt(argc, argv, "b:de:f:p:s:u")) != -1) {
     switch (opt) {
       case 'b': {
         bs = (size_t) strtol(optarg, NULL, 0);
@@ -131,6 +131,10 @@ int main(int argc, char **argv) {
           fprintf(stderr, "invalid fs block size '%s'\n", optarg);
           return 1;
         }
+        break;
+      }
+      case 'd': {
+        log_reads = log_writes = log_erases = true;
         break;
       }
       case 'e': {
@@ -174,8 +178,9 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else {
-    if (fs_size == -1)
+    if (fs_size == -1) {
       show_usage(argv, "-s is required when creating an image");
+    }
     image = malloc(fs_size);
     mem_spiffs_erase(NULL, 0, fs_size);
     // Mount will fail but is required.

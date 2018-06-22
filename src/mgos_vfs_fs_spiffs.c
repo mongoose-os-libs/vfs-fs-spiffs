@@ -144,17 +144,21 @@ static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
   cfg.hal_write_f = mgos_spiffs_write;
   cfg.hal_erase_f = mgos_spiffs_erase;
   fsd->fs.user_data = fs;
-  fs->fs_data = fsd;
   spfs = &fsd->fs;
-  LOG(LL_DEBUG,
-      ("addr 0x%x size %u bs %u ps %u es %u nfd %u encr %d",
+  r = SPIFFS_mount(spfs, &cfg, fsd->work, fsd->fds, num_fds * sizeof(spiffs_fd),
+                   NULL, 0, NULL);
+  LOG((r == SPIFFS_OK ? LL_DEBUG : LL_ERROR),
+      ("addr 0x%x size %u bs %u ps %u es %u nfd %u encr %d =>",
        (unsigned int) cfg.phys_addr, (unsigned int) cfg.phys_size,
        (unsigned int) cfg.log_block_size, (unsigned int) cfg.log_page_size,
        (unsigned int) cfg.phys_erase_block, (unsigned int) num_fds,
        fsd->encrypt));
-  r = SPIFFS_mount(spfs, &cfg, fsd->work, fsd->fds, num_fds * sizeof(spiffs_fd),
-                   NULL, 0, NULL);
 out:
+  if (r == SPIFFS_OK) {
+    fs->fs_data = fsd;
+  } else {
+    free(fsd);
+  }
   return (r == SPIFFS_OK);
 }
 
@@ -219,7 +223,7 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
   return ret;
 }
 
-bool mgos_vfs_fs_spiffs_umount(struct mgos_vfs_fs *fs) {
+static bool mgos_vfs_fs_spiffs_umount(struct mgos_vfs_fs *fs) {
   struct mgos_vfs_fs_spiffs_data *fsd =
       (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
   SPIFFS_unmount(&fsd->fs);
@@ -237,19 +241,19 @@ static void mgos_vfs_fs_spiffs_get_info(struct mgos_vfs_fs *fs, u32_t *total,
   SPIFFS_info(&fsd->fs, total, used);
 }
 
-size_t mgos_vfs_fs_spiffs_get_space_total(struct mgos_vfs_fs *fs) {
+static size_t mgos_vfs_fs_spiffs_get_space_total(struct mgos_vfs_fs *fs) {
   u32_t total, used;
   mgos_vfs_fs_spiffs_get_info(fs, &total, &used);
   return total;
 }
 
-size_t mgos_vfs_fs_spiffs_get_space_used(struct mgos_vfs_fs *fs) {
+static size_t mgos_vfs_fs_spiffs_get_space_used(struct mgos_vfs_fs *fs) {
   u32_t total, used;
   mgos_vfs_fs_spiffs_get_info(fs, &total, &used);
   return used;
 }
 
-size_t mgos_vfs_fs_spiffs_get_space_free(struct mgos_vfs_fs *fs) {
+static size_t mgos_vfs_fs_spiffs_get_space_free(struct mgos_vfs_fs *fs) {
   u32_t total, used;
   mgos_vfs_fs_spiffs_get_info(fs, &total, &used);
   return total - used;
@@ -296,15 +300,15 @@ static int spiffs_err_to_errno(int r) {
   return ENXIO;
 }
 
-int set_spiffs_errno(spiffs *spfs, int res) {
+static int set_spiffs_errno(spiffs *spfs, int res) {
   int e = SPIFFS_errno(spfs);
   if (res >= 0) return res;
   errno = spiffs_err_to_errno(e);
   return -1;
 }
 
-int mgos_vfs_fs_spiffs_open(struct mgos_vfs_fs *fs, const char *path, int flags,
-                            int mode) {
+static int mgos_vfs_fs_spiffs_open(struct mgos_vfs_fs *fs, const char *path,
+                                   int flags, int mode) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
   spiffs_mode sm = 0;
   int rw = (flags & 3);
@@ -374,13 +378,13 @@ int mgos_vfs_fs_spiffs_open(struct mgos_vfs_fs *fs, const char *path, int flags,
   }
 }
 
-int mgos_vfs_fs_spiffs_close(struct mgos_vfs_fs *fs, int fd) {
+static int mgos_vfs_fs_spiffs_close(struct mgos_vfs_fs *fs, int fd) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
   return set_spiffs_errno(spfs, SPIFFS_close(spfs, fd));
 }
 
-ssize_t mgos_vfs_fs_spiffs_read(struct mgos_vfs_fs *fs, int fd, void *dstv,
-                                size_t size) {
+static ssize_t mgos_vfs_fs_spiffs_read(struct mgos_vfs_fs *fs, int fd,
+                                       void *dstv, size_t size) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   spiffs_stat s;
@@ -463,8 +467,8 @@ ssize_t mgos_vfs_fs_spiffs_read(struct mgos_vfs_fs *fs, int fd, void *dstv,
   }
 }
 
-ssize_t mgos_vfs_fs_spiffs_write(struct mgos_vfs_fs *fs, int fd,
-                                 const void *datav, size_t size) {
+static ssize_t mgos_vfs_fs_spiffs_write(struct mgos_vfs_fs *fs, int fd,
+                                        const void *datav, size_t size) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   spiffs_stat s;
@@ -592,8 +596,8 @@ static void mgos_vfs_fs_spiffs_xlate_stat(spiffs *spfs, spiffs_stat *ss,
 #endif
 }
 
-int mgos_vfs_fs_spiffs_stat(struct mgos_vfs_fs *fs, const char *path,
-                            struct stat *st) {
+static int mgos_vfs_fs_spiffs_stat(struct mgos_vfs_fs *fs, const char *path,
+                                   struct stat *st) {
   int res;
   spiffs_stat ss;
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
@@ -635,8 +639,8 @@ int mgos_vfs_fs_spiffs_fstat(struct mgos_vfs_fs *fs, int fd, struct stat *st) {
   return set_spiffs_errno(spfs, res);
 }
 
-off_t mgos_vfs_fs_spiffs_lseek(struct mgos_vfs_fs *fs, int fd, off_t offset,
-                               int whence) {
+static off_t mgos_vfs_fs_spiffs_lseek(struct mgos_vfs_fs *fs, int fd,
+                                      off_t offset, int whence) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   spiffs_stat s;
@@ -667,8 +671,8 @@ off_t mgos_vfs_fs_spiffs_lseek(struct mgos_vfs_fs *fs, int fd, off_t offset,
   return set_spiffs_errno(spfs, SPIFFS_lseek(spfs, fd, offset, whence));
 }
 
-int mgos_vfs_fs_spiffs_rename(struct mgos_vfs_fs *fs, const char *src,
-                              const char *dst) {
+static int mgos_vfs_fs_spiffs_rename(struct mgos_vfs_fs *fs, const char *src,
+                                     const char *dst) {
   int res;
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
@@ -699,7 +703,7 @@ int mgos_vfs_fs_spiffs_rename(struct mgos_vfs_fs *fs, const char *src,
   return set_spiffs_errno(spfs, SPIFFS_rename(spfs, src, dst));
 }
 
-int mgos_vfs_fs_spiffs_unlink(struct mgos_vfs_fs *fs, const char *path) {
+static int mgos_vfs_fs_spiffs_unlink(struct mgos_vfs_fs *fs, const char *path) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   char enc_path[SPIFFS_OBJ_NAME_LEN];
@@ -798,7 +802,7 @@ static bool mgos_vfs_fs_spiffs_gc_all(spiffs *spfs) {
   return true;
 }
 
-bool mgos_vfs_fs_spiffs_gc(struct mgos_vfs_fs *fs) {
+static bool mgos_vfs_fs_spiffs_gc(struct mgos_vfs_fs *fs) {
   struct mgos_vfs_fs_spiffs_data *fsd =
       (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
   return mgos_vfs_fs_spiffs_gc_all(&fsd->fs);
