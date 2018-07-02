@@ -148,17 +148,13 @@ static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
   r = SPIFFS_mount(spfs, &cfg, fsd->work, fsd->fds, num_fds * sizeof(spiffs_fd),
                    NULL, 0, NULL);
   LOG((r == SPIFFS_OK ? LL_DEBUG : LL_ERROR),
-      ("addr 0x%x size %u bs %u ps %u es %u nfd %u encr %d =>",
+      ("addr 0x%x size %u bs %u ps %u es %u nfd %u encr %d => %d",
        (unsigned int) cfg.phys_addr, (unsigned int) cfg.phys_size,
        (unsigned int) cfg.log_block_size, (unsigned int) cfg.log_page_size,
        (unsigned int) cfg.phys_erase_block, (unsigned int) num_fds,
-       fsd->encrypt));
+       fsd->encrypt, (int) r));
 out:
-  if (r == SPIFFS_OK) {
-    fs->fs_data = fsd;
-  } else {
-    free(fsd);
-  }
+  fs->fs_data = fsd;
   return (r == SPIFFS_OK);
 }
 
@@ -187,6 +183,7 @@ out:
   free(fsd->work);
   free(fsd->fds);
   free(fsd);
+  fs->fs_data = NULL;
   return ret;
 }
 
@@ -218,6 +215,7 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
       free(fsd->work);
       free(fsd->fds);
       free(fsd);
+      fs->fs_data = NULL;
     }
   }
   return ret;
