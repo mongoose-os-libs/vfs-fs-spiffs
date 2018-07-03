@@ -1,6 +1,7 @@
 .DEFAULT_GOAL = all
 
 BUILD_DIR ?= .
+FROZEN_PATH ?= $(CURDIR)/../../../frozen
 SPIFFS_SRC_PATH ?= $(CURDIR)/../src/spiffs
 SPIFFS_INCLUDE_PATH ?= $(CURDIR)/../include/spiffs
 SPIFFS_CONFIG_PATH ?=
@@ -14,10 +15,10 @@ SPIFFS_TOOLS_CFLAGS = -Wall -Werror -DNO_ESP -DSPIFFS_TEST_VISUALISATION -DSPIFF
 all: $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/mkspiffs8 $(BUILD_DIR)/unspiffs $(BUILD_DIR)/unspiffs8
 
 define compile
-	$(Q) cc -I. -I$(SPIFFS_CONFIG_PATH) -I$(SPIFFS_INCLUDE_PATH) -o $@ $^ $(SPIFFS_TOOLS_CFLAGS) $1
+	$(Q) cc -I. -I$(SPIFFS_CONFIG_PATH) -I$(SPIFFS_INCLUDE_PATH) -I$(FROZEN_PATH) -o $@ $^ $(SPIFFS_TOOLS_CFLAGS) $1
 endef
 
-COMMON_FILES = mem_spiffs.c $(wildcard $(SPIFFS_SRC_PATH)/*.c)
+COMMON_FILES = mem_spiffs.c $(wildcard $(SPIFFS_SRC_PATH)/*.c) $(FROZEN_PATH)/frozen.c
 
 $(BUILD_DIR)/spls: spls.c $(COMMON_FILES)
 	$(call compile,)

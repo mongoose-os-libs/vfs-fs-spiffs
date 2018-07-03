@@ -23,6 +23,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "frozen.h"
+
 #include "mem_spiffs.h"
 
 bool copy(char *src, char *dst) {
@@ -33,7 +35,7 @@ bool copy(char *src, char *dst) {
   spiffs_file sfd;
   int ifd = -1;
 
-  fprintf(stderr, "     Adding %s: ", dst);
+  fprintf(stderr, "       Adding %s: ", dst);
 
   ifd = open(src, O_RDONLY);
   if (ifd < 0) {
@@ -109,8 +111,8 @@ cleanup:
 void show_usage(char *argv[], const char *err_msg) {
   if (err_msg != NULL) fprintf(stderr, "Error: %s\r\n", err_msg);
   fprintf(stderr,
-          "usage: %s [-s fs_size] [-b block_size] [-p page_size] [-e "
-          "erase_size] [-f image_file] [-u] [-d] <root_dir>\n",
+          "Usage: %s [-u] [-d] [-s fs_size] [-b block_size] [-p page_size] "
+          "[-e erase_size] [-o json_opts] [-f image_file] <root_dir>\n",
           argv[0]);
   exit(1);
 }
@@ -123,7 +125,7 @@ int main(int argc, char **argv) {
   bool update = false;
   int fs_size = -1, bs = FS_BLOCK_SIZE, ps = FS_PAGE_SIZE, es = FS_ERASE_SIZE;
 
-  while ((opt = getopt(argc, argv, "b:de:f:p:s:u")) != -1) {
+  while ((opt = getopt(argc, argv, "b:de:f:o:p:s:u")) != -1) {
     switch (opt) {
       case 'b': {
         bs = (size_t) strtol(optarg, NULL, 0);
@@ -147,6 +149,11 @@ int main(int argc, char **argv) {
       }
       case 'f': {
         image_file = optarg;
+        break;
+      }
+      case 'o': {
+        json_scanf(optarg, strlen(optarg), "{size: %u, bs: %u, ps: %u, es: %u}",
+                   &fs_size, &bs, &ps, &es);
         break;
       }
       case 'p': {
@@ -201,6 +208,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "unable to open directory %s\n", root_dir);
     return 1;
   } else {
+    fprintf(stderr, "     FS params: size=%u, bs=%u, ps=%u, es=%u\n", fs_size,
+            bs, ps, es);
     if (!read_dir(dir, root_dir)) {
       return 1;
     }
@@ -208,9 +217,8 @@ int main(int argc, char **argv) {
 
   u32_t total, used;
   SPIFFS_info(&fs, &total, &used);
-  fprintf(stderr,
-          "     Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
-          (unsigned int) fs_size, total, used, total - used);
+  fprintf(stderr, "     FS stats : space total=%u, used=%u, free=%u\n", total,
+          used, total - used);
 
   return mem_spiffs_dump(image_file) ? 0 : 2;
 }
