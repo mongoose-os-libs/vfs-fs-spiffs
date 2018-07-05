@@ -91,7 +91,7 @@ static s32_t mgos_spiffs_read(spiffs *spfs, u32_t addr, u32_t size, u8_t *dst) {
     return SPIFFS_OK;
   }
 #endif
-  if (!fs->dev->ops->read(fs->dev, addr, size, dst)) {
+  if (fs->dev->ops->read(fs->dev, addr, size, dst) != 0) {
     return SPIFFS_ERR_NOT_READABLE;
   }
   return SPIFFS_OK;
@@ -100,7 +100,7 @@ static s32_t mgos_spiffs_read(spiffs *spfs, u32_t addr, u32_t size, u8_t *dst) {
 static s32_t mgos_spiffs_write(spiffs *spfs, u32_t addr, u32_t size,
                                u8_t *src) {
   struct mgos_vfs_fs *fs = (struct mgos_vfs_fs *) spfs->user_data;
-  if (!fs->dev->ops->write(fs->dev, addr, size, src)) {
+  if (fs->dev->ops->write(fs->dev, addr, size, src) != 0) {
     return SPIFFS_ERR_NOT_WRITABLE;
   }
   return SPIFFS_OK;
@@ -108,7 +108,7 @@ static s32_t mgos_spiffs_write(spiffs *spfs, u32_t addr, u32_t size,
 
 static s32_t mgos_spiffs_erase(spiffs *spfs, u32_t addr, u32_t size) {
   struct mgos_vfs_fs *fs = (struct mgos_vfs_fs *) spfs->user_data;
-  if (!fs->dev->ops->erase(fs->dev, addr, size)) {
+  if (fs->dev->ops->erase(fs->dev, addr, size) != 0) {
     return SPIFFS_ERR_ERASE_FAIL;
   }
   return SPIFFS_OK;
