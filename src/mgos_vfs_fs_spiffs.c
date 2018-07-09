@@ -927,6 +927,7 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
       }
       fm->plain_size += n;
       enc_size += sizeof(block);
+      mgos_wdt_feed();
     }
     if (SPIFFS_fupdate_meta(spfs, fd, fm) != SPIFFS_OK) {
       LOG(LL_ERROR,
