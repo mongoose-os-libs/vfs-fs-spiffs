@@ -787,6 +787,7 @@ static bool mgos_vfs_fs_spiffs_gc_all(spiffs *spfs) {
     del_after = spfs->stats_p_deleted;
     LOG(LL_DEBUG, ("GC result %d del pages %u -> %u", r,
                    (unsigned int) del_before, (unsigned int) del_after));
+    (void) r;
   } while (del_after < del_before);
   return true;
 }
