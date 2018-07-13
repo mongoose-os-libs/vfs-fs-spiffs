@@ -167,19 +167,10 @@ static bool mgos_vfs_fs_spiffs_mkfs(struct mgos_vfs_fs *fs, const char *opts) {
   if (fsd == NULL) return false;
   spiffs *spfs = &fsd->fs;
   if (ret) {
-    bool force = false;
-    /* Mount succeeded, there's a filesystem there already. To re-format it,
-     * user must set "force". */
     SPIFFS_unmount(spfs);
-    json_scanf(opts, strlen(opts), "{force: %B}", &force);
-    if (!force) {
-      LOG(LL_ERROR, ("There is a valid FS already, but 'force' is not set"));
-      ret = false;
-      goto out;
-    }
+    LOG(LL_WARN, ("There is a valid FS already, reformatting"));
   }
   ret = (SPIFFS_format(spfs) == SPIFFS_OK);
-out:
   free(fsd->work);
   free(fsd->fds);
   free(fsd);
