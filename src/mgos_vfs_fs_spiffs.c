@@ -91,7 +91,7 @@ static s32_t mgos_spiffs_read(spiffs *spfs, u32_t addr, u32_t size, u8_t *dst) {
     return SPIFFS_OK;
   }
 #endif
-  if (fs->dev->ops->read(fs->dev, addr, size, dst) != 0) {
+  if (mgos_vfs_dev_read(fs->dev, addr, size, dst) != 0) {
     return SPIFFS_ERR_NOT_READABLE;
   }
   return SPIFFS_OK;
@@ -100,7 +100,7 @@ static s32_t mgos_spiffs_read(spiffs *spfs, u32_t addr, u32_t size, u8_t *dst) {
 static s32_t mgos_spiffs_write(spiffs *spfs, u32_t addr, u32_t size,
                                u8_t *src) {
   struct mgos_vfs_fs *fs = (struct mgos_vfs_fs *) spfs->user_data;
-  if (fs->dev->ops->write(fs->dev, addr, size, src) != 0) {
+  if (mgos_vfs_dev_write(fs->dev, addr, size, src) != 0) {
     return SPIFFS_ERR_NOT_WRITABLE;
   }
   return SPIFFS_OK;
@@ -108,7 +108,7 @@ static s32_t mgos_spiffs_write(spiffs *spfs, u32_t addr, u32_t size,
 
 static s32_t mgos_spiffs_erase(spiffs *spfs, u32_t addr, u32_t size) {
   struct mgos_vfs_fs *fs = (struct mgos_vfs_fs *) spfs->user_data;
-  if (fs->dev->ops->erase(fs->dev, addr, size) != 0) {
+  if (mgos_vfs_dev_erase(fs->dev, addr, size) != 0) {
     return SPIFFS_ERR_ERASE_FAIL;
   }
   return SPIFFS_OK;
@@ -124,7 +124,7 @@ static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
       (struct mgos_vfs_fs_spiffs_data *) calloc(1, sizeof(*fsd));
   if (fsd == NULL) goto out;
   cfg.phys_addr = 0;
-  cfg.phys_size = fs->dev->ops->get_size(fs->dev);
+  cfg.phys_size = mgos_vfs_dev_get_size(fs->dev);
   cfg.log_block_size = MGOS_SPIFFS_DEFAULT_BLOCK_SIZE;
   cfg.log_page_size = MGOS_SPIFFS_DEFAULT_PAGE_SIZE;
   cfg.phys_erase_block = MGOS_SPIFFS_DEFAULT_ERASE_SIZE;
@@ -1036,7 +1036,7 @@ uint8_t mgos_vfs_fs_spiffs_read_mmapped_byte(struct mgos_vfs_mmap_desc *desc,
   uint8_t ret;
 
   struct mgos_vfs_dev *dev = desc->fs->dev;
-  dev->ops->read(dev, dev_offset, 1, &ret);
+  mgos_vfs_dev_read(dev, dev_offset, 1, &ret);
   return ret;
 }
 
