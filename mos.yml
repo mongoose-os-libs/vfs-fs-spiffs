@@ -15,10 +15,14 @@ includes:
 libs:
   - origin: https://github.com/mongoose-os-libs/vfs-common
 
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
 tags:
   - c
   - fs
   - vfs
   - core
 
-manifest_version: 2017-09-29
+manifest_version: 2018-06-20
