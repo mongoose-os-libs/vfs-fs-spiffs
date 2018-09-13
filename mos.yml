@@ -24,5 +24,6 @@ tags:
   - fs
   - vfs
   - core
+  - docs:drivers:VFS (SPIFFS)
 
 manifest_version: 2018-06-20
