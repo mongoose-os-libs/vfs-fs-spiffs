@@ -788,6 +788,7 @@ static bool mgos_vfs_fs_spiffs_gc_all(spiffs *spfs) {
     LOG(LL_DEBUG, ("GC result %d del pages %u -> %u", r,
                    (unsigned int) del_before, (unsigned int) del_after));
     (void) r;
+    mgos_wdt_feed();
   } while (del_after < del_before);
   return true;
 }
@@ -854,11 +855,18 @@ bool mgos_vfs_fs_spiffs_dec_name(const char *enc_name, char *name,
 bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
   bool res = false;
   spiffs_DIR d;
+  uint8_t *buf = NULL;
   struct spiffs_dirent e;
   spiffs_file fd = -1;
+  size_t buf_size = 131072;
   if (SPIFFS_opendir(spfs, "/", &d) == NULL) {
     return false;
   }
+  do {
+    buf_size /= 2;
+    buf = malloc(buf_size);
+  } while (buf == NULL && buf_size > CS_SPIFFS_ENCRYPTION_BLOCK_SIZE);
+  if (buf == NULL) goto out;
   while (SPIFFS_readdir(&d, &e) != NULL) {
     char enc_name[SPIFFS_OBJ_NAME_LEN];
     struct file_meta *fm = (struct file_meta *) e.meta;
@@ -866,8 +874,8 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
         ("%s (%u) es %u ps %u", e.name, e.obj_id, e.size, fm->plain_size));
     if (fm->plain_size != DEFAULT_PLAIN_SIZE) continue; /* Already encrypted */
     if (!fm->encryption_not_started) {
-      LOG(LL_ERROR, ("%s is half-encrypted; FS is corrupted.", e.name));
-      continue;
+      LOG(LL_ERROR, ("%s is partially encrypted; FS is corrupted.", e.name));
+      goto out;
     }
     if (!mgos_vfs_fs_spiffs_enc_name((const char *) e.name, enc_name,
                                      sizeof(enc_name))) {
@@ -886,11 +894,10 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
       LOG(LL_ERROR, ("%s: update_meta failed: %d", e.name, SPIFFS_errno(spfs)));
       goto out;
     }
-    int enc_size = 0;
+    size_t enc_size = 0;
     fm->plain_size = 0;
     while (true) {
-      uint8_t block[CS_SPIFFS_ENCRYPTION_BLOCK_SIZE];
-      int n = SPIFFS_read(spfs, fd, block, sizeof(block));
+      int n = SPIFFS_read(spfs, fd, buf, buf_size);
       if (n < 0) {
         int err = SPIFFS_errno(spfs);
         if (err == SPIFFS_ERR_END_OF_OBJECT) break;
@@ -899,11 +906,13 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
       } else if (n == 0) {
         break;
       }
-      for (int i = n; i < sizeof(block); i++) {
-        block[i] = 0;
+      size_t blen = (size_t) n;
+      /* Pad to block size. */
+      while (blen % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0) {
+        buf[blen++] = 0;
       }
-      if (!mgos_vfs_fs_spiffs_encrypt_block(e.obj_id, fm->plain_size, block,
-                                            sizeof(block))) {
+      if (!mgos_vfs_fs_spiffs_encrypt_block(e.obj_id, fm->plain_size, buf,
+                                            blen)) {
         LOG(LL_ERROR, ("%s: encrypt failed", e.name));
         goto out;
       }
@@ -912,13 +921,13 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
         LOG(LL_ERROR, ("%s: seek failed: %d", e.name, SPIFFS_errno(spfs)));
         goto out;
       }
-      int r = SPIFFS_write(spfs, fd, block, sizeof(block));
-      if (r != sizeof(block)) {
+      int r = SPIFFS_write(spfs, fd, buf, blen);
+      if (r != (int) blen) {
         LOG(LL_ERROR, ("%s: write failed: %d", e.name, SPIFFS_errno(spfs)));
         goto out;
       }
       fm->plain_size += n;
-      enc_size += sizeof(block);
+      enc_size += blen;
       mgos_wdt_feed();
     }
     if (SPIFFS_fupdate_meta(spfs, fd, fm) != SPIFFS_OK) {
@@ -948,6 +957,7 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
 out:
   if (fd >= 0) SPIFFS_close(spfs, fd);
   SPIFFS_closedir(&d);
+  free(buf);
   return res;
 }
 #endif /* CS_SPIFFS_ENABLE_ENCRYPTION */
