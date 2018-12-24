@@ -315,6 +315,17 @@ s32_t spiffs_gc_find_candidate(
           used_pages_in_block * SPIFFS_GC_HEUR_W_USED +
           erase_age * (fs_crammed ? 0 : SPIFFS_GC_HEUR_W_ERASE_AGE);
       int cand_ix = 0;
+      if (deleted_pages_in_block == 0) {
+        /*
+         * GC'ing this block will not free any pages, knock it way down.
+         * This fixes cases where GC cannot make any progress.
+         * This also means that static data will not get rewritten and thus its
+         * blocks not get even wear. However, since SPIFFS is not fault-tolerant
+         * keeping static data safe and not rewriting it is a plus, and
+         * wear-leveling takes a back seat in this case.
+         */
+        score = 0;
+      }
       SPIFFS_GC_DBG("gc_check: bix:"_SPIPRIbl" del:"_SPIPRIi" use:"_SPIPRIi" score:"_SPIPRIi"\n", cur_block, deleted_pages_in_block, used_pages_in_block, score);
       while (cand_ix < max_candidates) {
         if (cand_blocks[cand_ix] == (spiffs_block_ix)-1) {
