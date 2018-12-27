@@ -381,7 +381,7 @@ static ssize_t mgos_vfs_fs_spiffs_read(struct mgos_vfs_fs *fs, int fd,
   if (r < 0) return set_spiffs_errno(spfs, r);
   const struct file_meta *fm = (const struct file_meta *) s.meta;
   if (spfs->encrypted && !fm->encryption_not_started) {
-    LOG(LL_DEBUG, ("enc_read %s (%u) %d", s.name, s.obj_id, size));
+    LOG(LL_VERBOSE_DEBUG, ("enc_read %s (%u) %d", s.name, s.obj_id, size));
     if (fm->plain_size == DEFAULT_PLAIN_SIZE ||
         (s.size % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
       goto out_enc_err;
@@ -429,13 +429,13 @@ static ssize_t mgos_vfs_fs_spiffs_read(struct mgos_vfs_fs *fs, int fd,
       to_copy -= to_skip;
       if (to_copy > (size - num_read)) to_copy = (size - num_read);
       memcpy(dst, block + to_skip, to_copy);
-      LOG(LL_DEBUG, ("enc_read po %d bo %d ts %d tc %d nr %d", plain_off,
-                     block_off, to_skip, to_copy, num_read));
+      LOG(LL_VERBOSE_DEBUG, ("enc_read po %d bo %d ts %d tc %d nr %d",
+                             plain_off, block_off, to_skip, to_copy, num_read));
       block_off += sizeof(block);
       num_read += to_copy;
       dst += to_copy;
     }
-    LOG(LL_DEBUG, ("%d @ %d => %d", size, plain_off, num_read));
+    LOG(LL_VERBOSE_DEBUG, ("%d @ %d => %d", size, plain_off, num_read));
     SPIFFS_lseek(spfs, fd, plain_off + num_read, SPIFFS_SEEK_SET);
     return num_read;
 
