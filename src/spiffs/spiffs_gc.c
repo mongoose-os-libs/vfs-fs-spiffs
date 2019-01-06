@@ -116,7 +116,7 @@ s32_t spiffs_gc_check(
       - fs->stats_p_allocated - fs->stats_p_deleted;
   int tries = 0;
 
-  if (fs->free_blocks > 3 &&
+  if (fs->free_blocks >= 3 &&
       (s32_t)len < free_pages * (s32_t)SPIFFS_DATA_PAGE_SIZE(fs)) {
     return SPIFFS_OK;
   }
@@ -132,8 +132,8 @@ s32_t spiffs_gc_check(
   }
 
   do {
-    SPIFFS_GC_DBG("\ngc_check #"_SPIPRIi": run gc free_blocks:"_SPIPRIi" pfree:"_SPIPRIi" pallo:"_SPIPRIi" pdele:"_SPIPRIi" ["_SPIPRIi"] len:"_SPIPRIi" of "_SPIPRIi"\n",
-        tries,
+    SPIFFS_GC_DBG("\ngc_check %d #"_SPIPRIi": run gc free_blocks:"_SPIPRIi" pfree:"_SPIPRIi" pallo:"_SPIPRIi" pdele:"_SPIPRIi" ["_SPIPRIi"] len:"_SPIPRIi" vs "_SPIPRIi"\n",
+        (int) len, tries,
         fs->free_blocks, free_pages, fs->stats_p_allocated, fs->stats_p_deleted, (free_pages+fs->stats_p_allocated+fs->stats_p_deleted),
         len, (u32_t)(free_pages*SPIFFS_DATA_PAGE_SIZE(fs)));
 
@@ -142,7 +142,7 @@ s32_t spiffs_gc_check(
     spiffs_block_ix cand;
     s32_t prev_free_pages = free_pages;
     // if the fs is crammed, ignore block age when selecting candidate - kind of a bad state
-    res = spiffs_gc_find_candidate(fs, &cands, &count, free_pages <= 0);
+    res = spiffs_gc_find_candidate(fs, &cands, &count, free_pages <= (int) SPIFFS_PAGES_PER_BLOCK(fs));
     SPIFFS_CHECK_RES(res);
     if (count == 0) {
       SPIFFS_GC_DBG("gc_check: no candidates, return\n");
@@ -189,7 +189,7 @@ s32_t spiffs_gc_check(
     res = SPIFFS_ERR_FULL;
   }
 
-  SPIFFS_GC_DBG("gc_check: finished, "_SPIPRIi" dirty, blocks "_SPIPRIi" free, "_SPIPRIi" pages free, "_SPIPRIi" tries, res "_SPIPRIi"\n",
+  SPIFFS_GC_DBG("gc_check %d: finished, "_SPIPRIi" dirty, blocks "_SPIPRIi" free, "_SPIPRIi" pages free, "_SPIPRIi" tries, res "_SPIPRIi"\n", (int) len,
       fs->stats_p_allocated + fs->stats_p_deleted,
       fs->free_blocks, free_pages, tries, res);
 
@@ -323,8 +323,10 @@ s32_t spiffs_gc_find_candidate(
          * blocks not get even wear. However, since SPIFFS is not fault-tolerant
          * keeping static data safe and not rewriting it is a plus, and
          * wear-leveling takes a back seat in this case.
+         *
+         * NB: this applies to fully free blocks as well.
          */
-        score = 0;
+        score = ((int) SPIFFS_PAGES_PER_BLOCK(fs)) * SPIFFS_GC_HEUR_W_USED;
       }
       SPIFFS_GC_DBG("gc_check: bix:"_SPIPRIbl" del:"_SPIPRIi" use:"_SPIPRIi" score:"_SPIPRIi"\n", cur_block, deleted_pages_in_block, used_pages_in_block, score);
       while (cand_ix < max_candidates) {

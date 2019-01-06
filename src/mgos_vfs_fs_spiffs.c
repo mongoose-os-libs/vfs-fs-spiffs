@@ -858,15 +858,13 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
   uint8_t *buf = NULL;
   struct spiffs_dirent e;
   spiffs_file fd = -1;
-  size_t buf_size = 131072;
+  size_t buf_size =
+      ((SPIFFS_PAGES_PER_BLOCK(spfs) / 2 - 2) * SPIFFS_DATA_PAGE_SIZE(spfs));
+  buf_size &= ~(CS_SPIFFS_ENCRYPTION_BLOCK_SIZE - 1);
+  if ((buf = malloc(buf_size)) == NULL) goto out;
   if (SPIFFS_opendir(spfs, "/", &d) == NULL) {
     return false;
   }
-  do {
-    buf_size /= 2;
-    buf = malloc(buf_size);
-  } while (buf == NULL && buf_size > CS_SPIFFS_ENCRYPTION_BLOCK_SIZE);
-  if (buf == NULL) goto out;
   while (SPIFFS_readdir(&d, &e) != NULL) {
     char enc_name[SPIFFS_OBJ_NAME_LEN];
     struct file_meta *fm = (struct file_meta *) e.meta;
@@ -923,7 +921,8 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
       }
       int r = SPIFFS_write(spfs, fd, buf, blen);
       if (r != (int) blen) {
-        LOG(LL_ERROR, ("%s: write failed: %d", e.name, SPIFFS_errno(spfs)));
+        LOG(LL_ERROR, ("%s: write %d @ %d failed: %d", e.name, (int) blen,
+                       (int) fm->plain_size, SPIFFS_errno(spfs)));
         goto out;
       }
       fm->plain_size += n;
