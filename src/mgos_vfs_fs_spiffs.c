@@ -321,6 +321,9 @@ static int mgos_vfs_fs_spiffs_open(struct mgos_vfs_fs *fs, const char *path,
 
     sm |= SPIFFS_RDONLY; /* Encryption always needs to be able to read. */
     int fd = SPIFFS_open(spfs, path, sm, 0);
+    if (fd < 0 && SPIFFS_errno(spfs) == SPIFFS_ERR_OUT_OF_FILE_DESCS) {
+      LOG(LL_ERROR, ("Too many open files!"));
+    }
     if (fd >= 0 && (rw & O_WRONLY)) {
       spiffs_stat s;
       s32_t r = SPIFFS_fstat(spfs, fd, &s);
@@ -363,7 +366,11 @@ static int mgos_vfs_fs_spiffs_open(struct mgos_vfs_fs *fs, const char *path,
 #endif
   {
     if (flags & O_APPEND) sm |= SPIFFS_APPEND;
-    return set_spiffs_errno(spfs, SPIFFS_open(spfs, path, sm, 0));
+    int fd = set_spiffs_errno(spfs, SPIFFS_open(spfs, path, sm, 0));
+    if (fd < 0 && SPIFFS_errno(spfs) == SPIFFS_ERR_OUT_OF_FILE_DESCS) {
+      LOG(LL_ERROR, ("Too many open files!"));
+    }
+    return fd;
   }
 }
 
