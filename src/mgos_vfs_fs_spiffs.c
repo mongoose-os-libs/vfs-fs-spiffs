@@ -26,6 +26,7 @@
 #include "common/cs_base64.h"
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
+#include "common/str_util.h"
 
 #include "frozen.h"
 
@@ -1128,6 +1129,31 @@ static const struct mgos_vfs_fs_ops mgos_vfs_fs_spiffs_ops = {
     .read_mmapped_byte = mgos_vfs_fs_spiffs_read_mmapped_byte,
 #endif
 };
+
+bool mgos_vfs_fs_spiffs_probe(struct mgos_vfs_dev *dev) {
+  spiffs spfs = {
+      .cfg.phys_addr = 0,
+      .cfg.phys_size = mgos_vfs_dev_get_size(dev),
+      .cfg.log_block_size = MGOS_SPIFFS_DEFAULT_BLOCK_SIZE,
+      .cfg.log_page_size = MGOS_SPIFFS_DEFAULT_PAGE_SIZE,
+      .cfg.phys_erase_block = MGOS_SPIFFS_DEFAULT_ERASE_SIZE,
+  };
+  bool unused_check, unused_encr;
+  const char *opts = CS_STRINGIFY_MACRO(MGOS_ROOT_FS_OPTS_SPIFFS);
+  unsigned int unused_num_fds = 0;
+  json_scanf(opts, strlen(opts),
+             "{addr: %u, size: %u, bs: %u, ps: %u, es: %u, nfd: %u, "
+             "check: %B, encr: %B}",
+             &spfs.cfg.phys_addr, &spfs.cfg.phys_size, &spfs.cfg.log_block_size,
+             &spfs.cfg.log_page_size, &spfs.cfg.phys_erase_block,
+             &unused_num_fds, &unused_check, &unused_encr);
+  spfs.block_count = SPIFFS_CFG_PHYS_SZ(&spfs) / SPIFFS_CFG_LOG_BLOCK_SZ(&spfs);
+  spiffs_obj_id magic, exp_magic = SPIFFS_MAGIC(&spfs, 0);
+  size_t magic_addr = SPIFFS_MAGIC_PADDR(&spfs, 0);
+  enum mgos_vfs_dev_err res =
+      mgos_vfs_dev_read(dev, magic_addr, sizeof(magic), &magic);
+  return (res == MGOS_VFS_DEV_ERR_NONE && magic == exp_magic);
+}
 
 bool mgos_vfs_fs_spiffs_init(void) {
   return mgos_vfs_fs_register_type(MGOS_VFS_FS_TYPE_SPIFFS,

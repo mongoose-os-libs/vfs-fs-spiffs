@@ -3,10 +3,11 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_
-#define CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_
+#pragma once
 
 #include <stdbool.h>
+
+#include "mgos_vfs_dev.h"
 
 #include <spiffs.h>
 
@@ -32,6 +33,9 @@ extern "C" {
 
 #define MGOS_VFS_FS_TYPE_SPIFFS "SPIFFS"
 
+/* Returns true if the device contains a SPIFFS filesystem. */
+bool mgos_vfs_fs_spiffs_probe(struct mgos_vfs_dev *dev);
+
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 bool mgos_vfs_fs_spiffs_enc_fs(spiffs *fs);
 
@@ -56,5 +60,3 @@ bool mgos_vfs_fs_spiffs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset,
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_ */
