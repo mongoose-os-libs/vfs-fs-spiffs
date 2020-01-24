@@ -751,7 +751,14 @@ static struct dirent *mgos_vfs_fs_spiffs_readdir(struct mgos_vfs_fs *fs,
                                                  DIR *dir) {
   spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) fs->fs_data)->fs;
   struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  spiffs_obj_id old_obj_id = sd->sde.obj_id;
   if (SPIFFS_readdir(&sd->sdh, &sd->sde) == SPIFFS_OK) {
+    errno = EBADF;
+    return NULL;
+  }
+  if (sd->sde.obj_id == old_obj_id) {
+    /* We're stuck. Sometimes this happens if a file was created
+     * during iteration. */
     errno = EBADF;
     return NULL;
   }
