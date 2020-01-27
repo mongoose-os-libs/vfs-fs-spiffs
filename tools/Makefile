@@ -12,7 +12,7 @@ endif
 
 SPIFFS_TOOLS_CFLAGS = -Wall -Werror -DNO_ESP -DSPIFFS_TEST_VISUALISATION -DSPIFFS_TOOLS_BUILD -g
 
-all: $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/mkspiffs8 $(BUILD_DIR)/unspiffs $(BUILD_DIR)/unspiffs8
+all: $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/mkspiffs8 $(BUILD_DIR)/spls $(BUILD_DIR)/spls8 $(BUILD_DIR)/unspiffs $(BUILD_DIR)/unspiffs8
 
 define compile
 	$(Q) cc -I. -I$(SPIFFS_CONFIG_PATH) -I$(SPIFFS_INCLUDE_PATH) -I$(FROZEN_PATH) -o $@ $^ $(SPIFFS_TOOLS_CFLAGS) $1
