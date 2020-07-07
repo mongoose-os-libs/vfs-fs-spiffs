@@ -1024,7 +1024,7 @@ static int mgos_vfs_fs_spiffs_mmap(int vfd, size_t len,
                           DUMMY_MMAP_BUFFER_START, len);
   if (t != (int32_t) len) {
     LOG(LL_ERROR,
-        ("mmap dummy read failed: expected len: %d, actual: %d", len, t));
+        ("mmap dummy read failed: expected len: %d, actual: %d", len, (int) t));
     ret = -1;
     goto clean;
   }
