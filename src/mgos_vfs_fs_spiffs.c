@@ -878,6 +878,7 @@ bool mgos_vfs_fs_spiffs_enc_fs(spiffs *spfs) {
   buf_size &= ~(CS_SPIFFS_ENCRYPTION_BLOCK_SIZE - 1);
   if ((buf = malloc(buf_size)) == NULL) goto out;
   if (SPIFFS_opendir(spfs, "/", &d) == NULL) {
+    free(buf);
     return false;
   }
   while (SPIFFS_readdir(&d, &e) != NULL) {
