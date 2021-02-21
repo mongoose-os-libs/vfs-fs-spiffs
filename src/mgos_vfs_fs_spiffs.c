@@ -818,7 +818,7 @@ static bool mgos_vfs_fs_spiffs_gc(struct mgos_vfs_fs *fs) {
 bool mgos_vfs_fs_spiffs_enc_name(const char *name, char *enc_name,
                                  size_t enc_name_size) {
   uint8_t tmp[SPIFFS_OBJ_NAME_LEN];
-  char tmp2[SPIFFS_OBJ_NAME_LEN];
+  char tmp2[SPIFFS_OBJ_NAME_LEN] = {0};
   int name_len = strlen(name);
   int enc_name_len = 0;
   if (name_len > MAX_PLAIN_NAME_LEN || enc_name_size < SPIFFS_OBJ_NAME_LEN) {
@@ -834,7 +834,7 @@ bool mgos_vfs_fs_spiffs_enc_name(const char *name, char *enc_name,
     }
     enc_name_len += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE;
   }
-  cs_base64_encode(tmp, enc_name_len, tmp2); /* NUL-terminates output. */
+  cs_base64_encode(tmp, enc_name_len, tmp2);
   LOG(LL_DEBUG, ("%s -> %s", name, tmp2));
   strncpy(enc_name, tmp2, enc_name_size);
   return true;
