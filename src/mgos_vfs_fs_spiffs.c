@@ -834,7 +834,7 @@ bool mgos_vfs_fs_spiffs_enc_name(const char *name, char *enc_name,
     }
     enc_name_len += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE;
   }
-  cs_base64_encode(tmp, enc_name_len, tmp2);
+  cs_base64_encode(tmp, enc_name_len, tmp2, NULL);
   LOG(LL_DEBUG, ("%s -> %s", name, tmp2));
   strncpy(enc_name, tmp2, enc_name_size);
   return true;
