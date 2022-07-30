@@ -25,6 +25,16 @@ build_vars:
 cdefs:
   MGOS_ROOT_FS_OPTS_SPIFFS: '{"bs":4096,"ps":256,"es":4096}'
 
+conds:
+  - when: mos.platform == "esp32"
+    apply:
+      includes:
+        - include/esp32xx
+  - when: mos.platform == "esp32c3"
+    apply:
+      includes:
+        - include/esp32xx
+
 tags:
   - c
   - fs

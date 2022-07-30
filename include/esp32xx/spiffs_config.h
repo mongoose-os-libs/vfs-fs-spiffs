@@ -19,8 +19,12 @@
 
 #ifndef SPIFFS_TOOLS_BUILD
 #define CS_SPIFFS_ENABLE_METADATA 1
+#ifdef MGOS_ESP32  // Legacy feature that we only keep for ESP32.
 #define CS_SPIFFS_ENABLE_ENCRYPTION 1
 #define CS_SPIFFS_ENCRYPTION_BLOCK_SIZE 32
+#else
+#define CS_SPIFFS_ENABLE_ENCRYPTION 0
+#endif
 #endif
 
 #include <stdio.h>
